@@ -1,0 +1,22 @@
+# Files to NEVER commit to git
+# Add this .gitignore at the root of elev8-backend/
+
+# Firebase service account (contains private keys!)
+src/main/resources/firebase-service-account.json
+
+# Environment / secrets
+.env
+*.env
+
+# Maven
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
