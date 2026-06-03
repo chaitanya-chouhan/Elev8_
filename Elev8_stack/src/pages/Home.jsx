@@ -131,7 +131,7 @@ export default function Home() {
             )}
 
             {/* Request a Callback Form */}
-            <div className="form-container" style={{background:'linear-gradient(135deg,rgba(54,209,220,0.07) 0%,rgba(91,134,229,0.07) 100%)',border:'1.5px solid rgba(54,209,220,0.25)',borderRadius:18}}>
+            <div className="form-container" style={{backgroundColor:'whitesmoke',borderTop:'4px solid var(--secondary-color)',boxShadow:'0 4px 12px rgba(255, 255, 255, 1)',borderRadius:12}}>
               <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:6}}>
                 <span style={{fontSize:28}}>📞</span>
                 <div>
