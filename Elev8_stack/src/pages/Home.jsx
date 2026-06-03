@@ -19,7 +19,9 @@ const initialMembers = [
 
 export default function Home() {
   const [members, setMembers] = useState(initialMembers)
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', healthGoals: 'Choose', newsletter: false })
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', contact: '', healthGoals: 'Choose', description: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [successMsg, setSuccessMsg] = useState('')
   const [showAlert, setShowAlert] = useState(true)
 
   function handleFormChange(e) {
@@ -27,11 +29,35 @@ export default function Home() {
     setForm(prev => ({ ...prev, [id]: type === 'checkbox' ? checked : value }))
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    setMembers(prev => [...prev, { id: prev.length + 1, name: `${form.firstName} ${form.lastName}`, email: form.email, goal: form.healthGoals === 'Choose' ? 'Not specified' : form.healthGoals, status: 'Active' }])
-    alert('Thank you for registering! Your information has been added to the community.')
-    setForm({ firstName: '', lastName: '', email: '', password: '', healthGoals: 'Choose', newsletter: false })
+    setSubmitting(true)
+    try {
+      await fetch('http://localhost:8080/api/callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: form.firstName,
+          lastName:  form.lastName,
+          email:     form.email,
+          contact:   form.contact,
+          healthGoals: form.healthGoals === 'Choose' ? '' : form.healthGoals,
+          description: form.description,
+        }),
+      })
+      setMembers(prev => [
+        ...prev,
+        { id: prev.length + 1, name: `${form.firstName} ${form.lastName}`, email: form.email, goal: form.healthGoals === 'Choose' ? 'Not specified' : form.healthGoals, status: 'Pending' }
+      ])
+      setSuccessMsg('✅ Callback request submitted! We\'ll contact you shortly.')
+      setForm({ firstName: '', lastName: '', email: '', contact: '', healthGoals: 'Choose', description: '' })
+      setTimeout(() => setSuccessMsg(''), 5000)
+    } catch (err) {
+      setSuccessMsg('⚠️ Saved locally. Backend not reachable — check your server.')
+      setTimeout(() => setSuccessMsg(''), 5000)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -104,27 +130,41 @@ export default function Home() {
               </div>
             )}
 
-            {/* Registration Form */}
-            <div className="form-container">
-              <h3 className="form-title">Join Our Wellness Community</h3>
-              <form id="registrationForm" onSubmit={handleSubmit}>
+            {/* Request a Callback Form */}
+            <div className="form-container" style={{background:'linear-gradient(135deg,rgba(54,209,220,0.07) 0%,rgba(91,134,229,0.07) 100%)',border:'1.5px solid rgba(54,209,220,0.25)',borderRadius:18}}>
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:6}}>
+                <span style={{fontSize:28}}>📞</span>
+                <div>
+                  <h3 className="form-title" style={{marginBottom:2}}>Request a Callback</h3>
+                  <p style={{color:'rgba(255,255,255,0.5)',fontSize:13,margin:0}}>Fill in your details and our wellness expert will call you back within 24 hours.</p>
+                </div>
+              </div>
+              <hr style={{borderColor:'rgba(54,209,220,0.2)',marginBottom:20}} />
+              {successMsg && (
+                <div style={{background:'rgba(54,209,220,0.15)',border:'1px solid rgba(54,209,220,0.4)',borderRadius:10,padding:'10px 16px',marginBottom:16,color:'#36d1dc',fontWeight:500}}>
+                  {successMsg}
+                </div>
+              )}
+              <form id="callbackForm" onSubmit={handleSubmit}>
                 <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label htmlFor="firstName" className="form-label">First Name</label>
-                    <input style={{opacity:.4}} placeholder="eg: kamal" type="text" className="form-control" id="firstName" value={form.firstName} onChange={handleFormChange} required />
+                    <label htmlFor="firstName" className="form-label">First Name <span style={{color:'#36d1dc'}}>*</span></label>
+                    <input placeholder="eg: Kamal" type="text" className="form-control" id="firstName" value={form.firstName} onChange={handleFormChange} required />
                   </div>
                   <div className="col-md-6 mb-3">
-                    <label htmlFor="lastName" className="form-label">Last Name</label>
-                    <input style={{opacity:.4}} placeholder="eg: gupta" type="text" className="form-control" id="lastName" value={form.lastName} onChange={handleFormChange} required />
+                    <label htmlFor="lastName" className="form-label">Last Name <span style={{color:'#36d1dc'}}>*</span></label>
+                    <input placeholder="eg: Gupta" type="text" className="form-control" id="lastName" value={form.lastName} onChange={handleFormChange} required />
                   </div>
                 </div>
-                <div className="mb-3">
-                  <label htmlFor="email" className="form-label">Email Address</label>
-                  <input style={{opacity:.4}} placeholder="eg: xyz@example.com" type="email" className="form-control" id="email" value={form.email} onChange={handleFormChange} required />
-                </div>
-                <div className="mb-3">
-                  <label htmlFor="password" className="form-label">Password</label>
-                  <input type="password" className="form-control" id="password" value={form.password} onChange={handleFormChange} required />
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label htmlFor="email" className="form-label">Email Address <span style={{color:'#36d1dc'}}>*</span></label>
+                    <input placeholder="eg: kamal@example.com" type="email" className="form-control" id="email" value={form.email} onChange={handleFormChange} required />
+                  </div>
+                  <div className="col-md-6 mb-3">
+                    <label htmlFor="contact" className="form-label">Contact Number <span style={{color:'#36d1dc'}}>*</span></label>
+                    <input placeholder="eg: +91 98765 43210" type="tel" className="form-control" id="contact" value={form.contact} onChange={handleFormChange} pattern="[+\d\s\-]{7,15}" required />
+                  </div>
                 </div>
                 <div className="mb-3">
                   <label htmlFor="healthGoals" className="form-label">Primary Health Goals</label>
@@ -135,13 +175,30 @@ export default function Home() {
                     <option>Stress Reduction</option>
                     <option>Better Sleep</option>
                     <option>Overall Wellness</option>
+                    <option>Weight Gain</option>
                   </select>
                 </div>
-                <div className="mb-3 form-check">
-                  <input type="checkbox" className="form-check-input" id="newsletter" checked={form.newsletter} onChange={handleFormChange} />
-                  <label className="form-check-label" htmlFor="newsletter">Subscribe to our wellness newsletter</label>
+                <div className="mb-3">
+                  <label htmlFor="description" className="form-label">Tell us about your health concern</label>
+                  <textarea
+                    className="form-control"
+                    id="description"
+                    rows={4}
+                    placeholder="Describe your current health situation, specific goals, or any concerns you'd like to discuss during the callback..."
+                    value={form.description}
+                    onChange={handleFormChange}
+                    style={{resize:'vertical',minHeight:100}}
+                  />
                 </div>
-                <div className="button-reg"><button type="submit" className="btn btn-primary">Register Now</button></div>
+                <div className="button-reg">
+                  <button type="submit" className="btn btn-primary" disabled={submitting} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 28px',fontSize:15}}>
+                    {submitting ? (
+                      <><span className="spinner-border spinner-border-sm" role="status" />&nbsp;Submitting...</>
+                    ) : (
+                      <>📞 Request Callback</>
+                    )}
+                  </button>
+                </div>
               </form>
             </div>
 
