@@ -23,6 +23,19 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
   const [showAlert, setShowAlert] = useState(true)
+  
+  const [waterGlasses, setWaterGlasses] = useState(() => {
+    const saved = localStorage.getItem('elev8_water_glasses')
+    return saved ? parseInt(saved, 10) : 3
+  })
+
+  function addWaterGlass() {
+    setWaterGlasses(prev => {
+      const next = prev >= 8 ? 0 : prev + 1
+      localStorage.setItem('elev8_water_glasses', next.toString())
+      return next
+    })
+  }
 
   function handleFormChange(e) {
     const { id, value, type, checked } = e.target
@@ -109,20 +122,54 @@ export default function Home() {
                 <Link className="sidebar-anchor" to="/calisthenics"><li><i className="fas fa-running"></i>Calisthenics</li></Link>
                 <Link className="sidebar-anchor" to="/circadian"><li><i className="fas fa-clock"></i>Circadian Rhythm</li></Link>
               </ul>
-              <br /><br />
-              <div className="mt-4">
-                <h5>Daily Tip</h5><br />
-                <div className="alert alert-custom">
-                  <p><strong>Hydration:</strong> Drink at least 8 glasses of water daily to maintain optimal body function and energy levels.</p><br />
-                  <p><strong>Sleep:</strong> Maintain a consistent sleep schedule by going to bed and waking up at the same time daily—even on weekends.</p><br />
-                  <p><strong>Physically active:</strong> Regular exercise improves cardiovascular health, boosts mood, and helps maintain a healthy weight.</p>
+
+              {/* Water Tracker Widget */}
+              <div className="sidebar-section">
+                <h5><i className="fas fa-glass-water" style={{color:'#36D1DC'}}></i> Water Tracker</h5>
+                <div className="water-tracker">
+                  <span style={{fontSize: '0.85rem', fontWeight: 600, color: '#4a5568'}}>
+                    Daily Goal: {waterGlasses} / 8 Glasses
+                  </span>
+                  <div className="water-glasses">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <i
+                        key={i}
+                        className={`fas fa-glass-water water-glass-icon ${i < waterGlasses ? 'filled' : ''}`}
+                      />
+                    ))}
+                  </div>
+                  <button className="btn-water" onClick={addWaterGlass}>
+                    {waterGlasses >= 8 ? '🔄 Reset Tracker' : '💧 Log a Glass'}
+                  </button>
+                </div>
+              </div>
+
+
+              {/* Daily Tip Widget */}
+              <div className="sidebar-section">
+                <h5><i className="fas fa-lightbulb" style={{color:'#36D1DC'}}></i> Daily Tip</h5>
+                <div className="alert alert-custom mb-0" style={{fontSize: '0.95rem', lineHeight: '1.45'}}>
+                  <p style={{marginBottom: 8}}><strong>Hydration:</strong> Drink at least 8 glasses of water daily to maintain optimal body function.</p>
+                  <p style={{marginBottom: 8}}><strong>Sleep:</strong> Maintain a consistent schedule by sleeping and waking at the same time daily.</p>
+                  <p style={{marginBottom: 8}}><strong>Activity:</strong> Regular exercise improves mood and maintains cardiovascular health.</p>
+                  <p style={{marginBottom: 0}}><strong>Mindfulness:</strong> Practice 5-10 minutes of deep breathing or meditation to calm your nervous system.</p>
+                </div>
+              </div>
+
+              {/* Focus of the Day / Motivational Quote */}
+              <div className="sidebar-section">
+                <h5><i className="fas fa-quote-left" style={{color:'#36D1DC'}}></i> Focus of the Day</h5>
+                <div className="quote-box">
+                  "Your body hears everything your mind says. Keep speaking strength, growth, and wellness into existence."
+                  <span className="quote-author">— Elev8 Wellness</span>
                 </div>
               </div>
             </div>
           </div>
 
+
           {/* Main Area */}
-          <div className="col-lg-9">
+          <div className="col-lg-9 main-content-col">
             {showAlert && (
               <div className="alert alert-success alert-dismissible fade show" role="alert">
                 <strong>Welcome!</strong> You've successfully landed on our health and wellness platform. Start your journey today!
