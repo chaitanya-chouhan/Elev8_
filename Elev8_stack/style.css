@@ -65,9 +65,23 @@
         }
 
         /* Sidebar Styling */
-        .col-lg-3 {
-            height: 35%;
+        @media (min-width: 992px) {
+            .sidebar-outer {
+                display: flex;
+                flex-direction: column;
+            }
+            .sidebar {
+                flex-grow: 1;
+            }
+            .main-content-col {
+                display: flex;
+                flex-direction: column;
+            }
+            .table-container {
+                flex-grow: 1;
+            }
         }
+
         .sidebar-anchor{
             text-decoration: none;
             color: #4a5568;
@@ -306,3 +320,133 @@
 @media (max-width: 1200px) { .products-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 992px) { .main-content-wrapper { flex-direction: column; } .cart-section { min-width: 100%; } }
 @media (max-width: 768px) { .products-grid { grid-template-columns: 1fr; } }
+
+/* ===== CUSTOM SIDEBAR WIDGETS ===== */
+.sidebar-section {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    margin-top: 25px;
+    padding-top: 20px;
+}
+
+.sidebar-section h5 {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Water Tracker */
+.water-tracker {
+    background: rgba(54, 209, 220, 0.05);
+    border: 1px solid rgba(54, 209, 220, 0.2);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+}
+.water-glasses {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 12px 0;
+    flex-wrap: wrap;
+}
+.water-glass-icon {
+    font-size: 1.3rem;
+    transition: transform 0.2s;
+    color: #cbd5e0;
+}
+.water-glass-icon.filled {
+    color: #36D1DC;
+    transform: scale(1.15);
+    text-shadow: 0 0 5px rgba(54,209,220,0.5);
+}
+.btn-water {
+    background: linear-gradient(135deg, #36D1DC, #5B86E5);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.3s;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(54,209,220,0.3);
+}
+.btn-water:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(54,209,220,0.5);
+}
+.btn-water:active {
+    transform: translateY(1px);
+}
+
+.quote-box {
+    background: linear-gradient(135deg, rgba(54, 209, 220, 0.1), rgba(91, 134, 229, 0.1));
+    color: #2D3748;
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid rgba(54, 209, 220, 0.25);
+    border-left: 4px solid var(--secondary-color);
+    font-style: italic;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 12px rgba(54, 209, 220, 0.05);
+}
+.quote-author {
+    display: block;
+    text-align: right;
+    font-size: 0.8rem;
+    font-style: normal;
+    font-weight: 600;
+    color: #2d8f96;
+    margin-top: 6px;
+}
+
+/* Event List */
+.sidebar-event-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.sidebar-event-item {
+    padding: 10px;
+    border-radius: 8px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    transition: all 0.3s;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.sidebar-event-item:hover {
+    background: rgba(54, 209, 220, 0.03);
+    border-color: rgba(54, 209, 220, 0.3);
+    transform: translateX(3px);
+}
+.event-date-badge {
+    background: linear-gradient(135deg, #36D1DC, #5B86E5);
+    color: white;
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 50px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.event-details {
+    flex-grow: 1;
+}
+.event-title {
+    font-weight: 600;
+    color: #2D3748;
+    margin-bottom: 2px;
+}
+.event-time {
+    font-size: 0.75rem;
+    color: #718096;
+}
