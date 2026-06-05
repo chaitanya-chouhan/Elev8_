@@ -119,10 +119,8 @@ export default function Navbar({ onNotification }) {
                   <Link to="/login" className="btn btn-outline-light" style={{ borderRadius: 20, padding: '5px 15px' }}>
                     <i className="fas fa-sign-in-alt me-1"></i>Login
                   </Link>
-                  <Link to="/register" className="btn" style={{
+                  <Link to="/register" className="btn btn-outline-light" style={{
                     borderRadius: 20, padding: '5px 15px',
-                    background: 'linear-gradient(135deg,#36D1DC,#5B86E5)',
-                    color: '#fff', border: 'none', fontWeight: 600
                   }}>
                     Sign Up
                   </Link>
