@@ -11,9 +11,29 @@ const products = [
   { id: 6, name: 'Elev8 Cup', price: 999, oldPrice: 1499, img: '/store/cup.jpg', desc: 'A premium cup for your protein shakes and daily hydration needs.' },
 ]
 
+/**
+ * Dynamically load the Razorpay checkout script.
+ * Returns a Promise that resolves when the script is loaded.
+ */
+function loadRazorpayScript() {
+  return new Promise((resolve) => {
+    if (document.getElementById('razorpay-script')) {
+      resolve(true)
+      return
+    }
+    const script = document.createElement('script')
+    script.id = 'razorpay-script'
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.onload = () => resolve(true)
+    script.onerror = () => resolve(false)
+    document.body.appendChild(script)
+  })
+}
+
 export default function Store() {
   const [cart, setCart] = useState([])
   const [quantities, setQuantities] = useState({ 1:1,2:1,3:1,4:1,5:1,6:1 })
+  const [paymentLoading, setPaymentLoading] = useState(false)
 
   function addToCart(product) {
     const qty = quantities[product.id]
@@ -28,21 +48,111 @@ export default function Store() {
   function removeFromCart(id) { setCart(prev => prev.filter(i => i.id !== id)) }
   function clearCart() { if(confirm('Clear cart?')) setCart([]) }
 
-  function showToast(msg) {
+  function showToast(msg, type = 'success') {
     const el = document.createElement('div')
     el.className = 'position-fixed top-0 end-0 p-3'
     el.style.zIndex = '1060'
-    el.innerHTML = `<div class="alert alert-success alert-dismissible fade show">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`
+    el.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`
     document.body.appendChild(el)
-    setTimeout(() => el.remove(), 3000)
+    setTimeout(() => el.remove(), 4000)
   }
 
   function updateQty(id, delta) {
     setQuantities(prev => ({ ...prev, [id]: Math.max(1, Math.min(10, (prev[id]||1) + delta)) }))
   }
 
+  /**
+   * handleCheckout — Full Razorpay payment flow:
+   * 1. Calls backend POST /api/payment/create-order to get orderId + keyId
+   * 2. Loads Razorpay checkout.js script dynamically
+   * 3. Opens the Razorpay payment modal
+   * 4. On payment success, calls backend POST /api/payment/verify to confirm signature
+   * 5. Shows success/failure toast
+   */
+  async function handleCheckout() {
+    if (cart.length === 0) {
+      alert('Your cart is empty! Add items before checking out.')
+      return
+    }
+
+    setPaymentLoading(true)
+
+    // Step 1: Create order on backend
+    let orderData
+    try {
+      const res = await fetch('http://localhost:8080/api/payment/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: totalAmount }),
+      })
+      orderData = await res.json()
+      if (!res.ok) throw new Error(orderData.error || 'Order creation failed')
+    } catch (err) {
+      showToast(`❌ Payment failed: ${err.message}`, 'danger')
+      setPaymentLoading(false)
+      return
+    }
+
+    // Step 2: Load Razorpay checkout script
+    const loaded = await loadRazorpayScript()
+    if (!loaded) {
+      showToast('❌ Could not load Razorpay. Check your internet connection.', 'danger')
+      setPaymentLoading(false)
+      return
+    }
+
+    // Step 3: Open Razorpay Payment Modal
+    const options = {
+      key: orderData.keyId,
+      amount: orderData.amount,          // in paise
+      currency: orderData.currency,
+      name: 'Elev8 Wellness',
+      description: `Order of ${totalItems} item(s)`,
+      image: '/favicon.ico',
+      order_id: orderData.orderId,
+      theme: { color: '#36D1DC' },
+
+      // Step 4: After successful payment, verify on backend
+      handler: async function (response) {
+        try {
+          const verifyRes = await fetch('http://localhost:8080/api/payment/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id:   response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature:  response.razorpay_signature,
+            }),
+          })
+          const verifyData = await verifyRes.json()
+
+          if (verifyData.success) {
+            showToast(`✅ Payment Successful! Payment ID: ${response.razorpay_payment_id}`, 'success')
+            setCart([]) // clear cart after successful payment
+          } else {
+            showToast('❌ Payment verification failed. Please contact support.', 'danger')
+          }
+        } catch {
+          showToast('⚠️ Payment done but verification failed. Contact support.', 'warning')
+        }
+        setPaymentLoading(false)
+      },
+
+      modal: {
+        ondismiss: () => {
+          showToast('Payment cancelled.', 'warning')
+          setPaymentLoading(false)
+        },
+      },
+    }
+
+    const razorpay = new window.Razorpay(options)
+    razorpay.open()
+  }
+
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
   const totalItems = cart.reduce((s, i) => s + i.qty, 0)
+  const totalAmount = subtotal + 99  // cart total + ₹99 shipping
 
   return (
     <>
@@ -109,8 +219,15 @@ export default function Store() {
               <div className="d-flex justify-content-between mb-3"><span>Subtotal:</span><span>₹{subtotal}</span></div>
               <div className="d-flex justify-content-between mb-3"><span>Shipping:</span><span>₹99</span></div>
               <div className="d-flex justify-content-between mb-4"><span className="cart-total">Total:</span><span className="cart-total">₹{subtotal + 99}</span></div>
-              <button className="checkout-btn mb-3" onClick={() => cart.length ? alert('Proceeding to checkout...') : alert('Cart is empty!')}>
-                <i className="fas fa-lock me-2"></i>Proceed to Checkout
+              <button
+                className="checkout-btn mb-3"
+                onClick={handleCheckout}
+                disabled={paymentLoading}
+                style={{ opacity: paymentLoading ? 0.7 : 1, cursor: paymentLoading ? 'wait' : 'pointer' }}
+              >
+                {paymentLoading
+                  ? <><span className="spinner-border spinner-border-sm me-2" role="status"></span>Processing...</>
+                  : <><i className="fas fa-lock me-2"></i>Proceed to Checkout (Razorpay)</>}
               </button>
               <button className="btn btn-outline-primary w-100" onClick={clearCart}>
                 <i className="fas fa-trash me-2"></i>Clear Cart
