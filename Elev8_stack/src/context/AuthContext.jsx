@@ -72,38 +72,48 @@ export function AuthProvider({ children }) {
   // ─── Login ────────────────────────────────────────────────
   async function login(email, password) {
     const cred = await signInWithEmailAndPassword(auth, email, password)
-    const { allowed, sessions } = await checkDeviceLimit(cred.user.uid)
-    if (!allowed) {
-      await signOut(auth)
-      const list = sessions.docs.map(d => d.data())
-      throw { code: 'device-limit', sessions: list }
+    try {
+      const { allowed, sessions } = await checkDeviceLimit(cred.user.uid)
+      if (!allowed) {
+        await signOut(auth)
+        const list = sessions.docs.map(d => d.data())
+        throw { code: 'device-limit', sessions: list }
+      }
+      await registerDevice(cred.user.uid)
+    } catch (err) {
+      if (err.code === 'device-limit') throw err
+      console.warn('Firestore session check failed (check security rules):', err.message)
     }
-    await registerDevice(cred.user.uid)
     return cred
   }
 
   // ─── Google Login ─────────────────────────────────────────
   async function loginWithGoogle() {
     const cred = await signInWithPopup(auth, googleProvider)
-    const { allowed, sessions } = await checkDeviceLimit(cred.user.uid)
-    if (!allowed) {
-      await signOut(auth)
-      const list = sessions.docs.map(d => d.data())
-      throw { code: 'device-limit', sessions: list }
+    try {
+      const { allowed, sessions } = await checkDeviceLimit(cred.user.uid)
+      if (!allowed) {
+        await signOut(auth)
+        const list = sessions.docs.map(d => d.data())
+        throw { code: 'device-limit', sessions: list }
+      }
+      // Upsert user profile in Firestore
+      await setDoc(
+        doc(db, 'users', cred.user.uid),
+        {
+          uid: cred.user.uid,
+          name: cred.user.displayName,
+          email: cred.user.email,
+          photoURL: cred.user.photoURL,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      )
+      await registerDevice(cred.user.uid)
+    } catch (err) {
+      if (err.code === 'device-limit') throw err
+      console.warn('Firestore profile write failed (check security rules):', err.message)
     }
-    // Upsert user profile in Firestore
-    await setDoc(
-      doc(db, 'users', cred.user.uid),
-      {
-        uid: cred.user.uid,
-        name: cred.user.displayName,
-        email: cred.user.email,
-        photoURL: cred.user.photoURL,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    )
-    await registerDevice(cred.user.uid)
     return cred
   }
 
@@ -112,14 +122,21 @@ export function AuthProvider({ children }) {
     const cred = await createUserWithEmailAndPassword(auth, email, password)
     const displayName = `${firstName} ${lastName}`
     await updateProfile(cred.user, { displayName })
-    await setDoc(doc(db, 'users', cred.user.uid), {
-      uid: cred.user.uid,
-      name: displayName,
-      email,
-      healthGoal,
-      createdAt: serverTimestamp(),
-    })
-    await registerDevice(cred.user.uid)
+    // Save profile to Firestore — requires Firestore rules to allow write
+    try {
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        uid: cred.user.uid,
+        name: displayName,
+        email,
+        healthGoal,
+        createdAt: serverTimestamp(),
+      })
+      await registerDevice(cred.user.uid)
+    } catch (firestoreErr) {
+      // Auth account created successfully — Firestore write failed (likely rules not set)
+      // User can still log in; profile will be incomplete until rules are fixed
+      console.warn('Firestore profile write failed (check security rules):', firestoreErr.message)
+    }
     return cred
   }
 

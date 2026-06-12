@@ -28,7 +28,7 @@ import java.util.Map;
  *  Step 2: React loads the Razorpay checkout popup modal with the orderId.
  *          User enters card/UPI/netbanking details and completes the payment.
  *
- *  Step 3: Razorpay sends back: razorpay_payment_id, razorpay_order_id, razorpay_signature.
+ *  Step 3: Razorpay sends back: årazorpay_payment_id, razorpay_order_id, razorpay_signature.
  *          React sends these 3 values to POST /api/payment/verify.
  *          This service verifies the HMAC SHA256 signature to confirm the payment is genuine.
  *

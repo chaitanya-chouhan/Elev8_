@@ -2,6 +2,29 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
+function friendlyAuthError(err) {
+  const code = err?.code || ''
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists. Please sign in instead.'
+    case 'auth/weak-password':
+      return 'Password is too weak. Use at least 6 characters.'
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.'
+    case 'auth/network-request-failed':
+      return 'Network error. Please check your internet connection.'
+    case 'auth/popup-closed-by-user':
+      return 'Google sign-up was cancelled. Please try again.'
+    case 'auth/popup-blocked':
+      return 'Popup was blocked. Please allow popups for this site.'
+    case 'auth/too-many-requests':
+      return 'Too many failed attempts. Please wait a moment and try again.'
+    default:
+      return err?.message?.replace('Firebase: ', '').replace(/\s*\(auth\/[^)]+\)\.?/, '') ||
+             'Registration failed. Please try again.'
+  }
+}
+
 const goals = ['Weight Loss', 'Muscle Gain', 'Stress Reduction', 'Better Sleep', 'Overall Wellness']
 
 export default function Register() {
@@ -33,7 +56,7 @@ export default function Register() {
       await register(form.email, form.password, form.firstName, form.lastName, form.healthGoal)
       navigate('/')
     } catch (err) {
-      setError(err.message || 'Registration failed.')
+      setError(friendlyAuthError(err))
     } finally { setLoading(false) }
   }
 
@@ -43,7 +66,7 @@ export default function Register() {
       await loginWithGoogle()
       navigate('/')
     } catch (err) {
-      setError(err.message || 'Google sign-up failed.')
+      setError(friendlyAuthError(err))
     } finally { setLoading(false) }
   }
 

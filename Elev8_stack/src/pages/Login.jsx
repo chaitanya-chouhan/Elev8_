@@ -1,14 +1,48 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { sendPasswordResetEmail } from 'firebase/auth'
+import { auth } from '../firebase'
+
+function friendlyAuthError(err) {
+  const code = err?.code || ''
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+      return 'No account found with this email. Please register first.'
+    case 'auth/wrong-password':
+      return 'Incorrect password. Please try again.'
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.'
+    case 'auth/user-disabled':
+      return 'This account has been disabled. Contact support.'
+    case 'auth/too-many-requests':
+      return 'Too many failed attempts. Please wait a moment and try again.'
+    case 'auth/network-request-failed':
+      return 'Network error. Please check your internet connection.'
+    case 'auth/popup-closed-by-user':
+      return 'Google sign-in was cancelled. Please try again.'
+    case 'auth/popup-blocked':
+      return 'Popup was blocked. Please allow popups for this site.'
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists. Please sign in instead.'
+    case 'auth/weak-password':
+      return 'Password is too weak. Use at least 6 characters.'
+    default:
+      return err?.message?.replace('Firebase: ', '').replace(/\s*\(auth\/[^)]+\)\.?/, '') ||
+             'Authentication failed. Please try again.'
+  }
+}
 
 export default function Login() {
   const { login, loginWithGoogle, revokeDevice } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
+  const [errorCode, setErrorCode] = useState('')
   const [deviceSessions, setDeviceSessions] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.id]: e.target.value }))
@@ -16,7 +50,7 @@ export default function Login() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setError(''); setLoading(true)
+    setError(''); setErrorCode(''); setLoading(true)
     try {
       await login(form.email, form.password)
       navigate('/')
@@ -25,13 +59,14 @@ export default function Login() {
         setDeviceSessions(err.sessions)
         setError(`You've reached the maximum of 2 simultaneous devices. Please log out from another device or revoke a session below.`)
       } else {
-        setError(err.message || 'Login failed. Check your credentials.')
+        setErrorCode(err?.code || '')
+        setError(friendlyAuthError(err))
       }
     } finally { setLoading(false) }
   }
 
   async function handleGoogle() {
-    setError(''); setLoading(true)
+    setError(''); setErrorCode(''); setLoading(true)
     try {
       await loginWithGoogle()
       navigate('/')
@@ -40,7 +75,7 @@ export default function Login() {
         setDeviceSessions(err.sessions)
         setError('Device limit reached. Revoke a session below.')
       } else {
-        setError(err.message || 'Google sign-in failed.')
+        setError(friendlyAuthError(err))
       }
     } finally { setLoading(false) }
   }
@@ -49,6 +84,20 @@ export default function Login() {
     await revokeDevice(uid, deviceId)
     setDeviceSessions(prev => prev.filter(s => s.deviceId !== deviceId))
     setError('Session revoked. Try logging in again.')
+  }
+
+  async function handleForgotPassword() {
+    if (!form.email) {
+      setError('Please enter your email address first.')
+      return
+    }
+    try {
+      await sendPasswordResetEmail(auth, form.email)
+      setResetSent(true)
+      setError('')
+    } catch (err) {
+      setError(friendlyAuthError(err))
+    }
   }
 
   return (
@@ -91,7 +140,8 @@ export default function Login() {
           <h1 className="auth-title">Welcome Back</h1>
           <p className="auth-subtitle">Sign in to continue your wellness journey</p>
 
-          {error && <div className="auth-error">{error}</div>}
+          {error && <div className="auth-error">{error}{(errorCode === 'auth/invalid-credential' || errorCode === 'auth/user-not-found') && (<span> → <Link to="/register" className="auth-link">Create an account</Link></span>)}</div>}
+          {resetSent && <div style={{background:'rgba(54,209,220,0.12)',border:'1px solid rgba(54,209,220,0.3)',borderRadius:10,padding:'12px 16px',color:'#36D1DC',fontSize:'0.9rem',marginBottom:18}}>✅ Password reset email sent! Check your inbox.</div>}
 
           {/* Device session revocation UI */}
           {deviceSessions && (
@@ -106,7 +156,7 @@ export default function Login() {
                   </div>
                   <button
                     className="btn-revoke"
-                    onClick={() => handleRevoke(form.email, s.deviceId)}
+                    onClick={() => handleRevoke(s.uid || form.email, s.deviceId)}
                   >Revoke</button>
                 </div>
               ))}
@@ -127,6 +177,13 @@ export default function Login() {
               placeholder="••••••••"
               value={form.password} onChange={handleChange} required
             />
+            <div style={{textAlign:'right',marginTop:-12,marginBottom:16}}>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                style={{background:'none',border:'none',color:'rgba(54,209,220,0.7)',fontSize:'0.82rem',cursor:'pointer',padding:0}}
+              >Forgot password?</button>
+            </div>
 
             <button
               type="submit" className="btn-auth btn-auth-primary"
